@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upper / Lower Split</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e8e6de;
+    --text: #18181a;
+    --muted: #86837a;
+    --subtle: #f0ede6;
+
+    --upper: #2563eb;
+    --upper-soft: #eff4ff;
+    --upper-border: #bfcffd;
+    --upper-muted: #5b7ff0;
+
+    --lower: #059669;
+    --lower-soft: #edfaf4;
+    --lower-border: #a7e8ce;
+    --lower-muted: #1fa878;
+
+    --rest-soft: #f5f4f0;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2.25rem 1.25rem 4rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container { width: 100%; max-width: 520px; }
+
+  /* ── Header ── */
+  .header { margin-bottom: 1.75rem; }
+  .header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+    color: var(--text);
+  }
+  .header p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* ── Week strip ── */
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 1.5rem;
+  }
+
+  .day-pill {
+    border-radius: 14px;
+    padding: 9px 4px 7px;
+    text-align: center;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+  .day-pill:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.09); }
+  .day-pill:active { transform: scale(0.95); }
+  .day-pill.upper { background: var(--upper-soft); border-color: var(--upper-border); }
+  .day-pill.lower { background: var(--lower-soft); border-color: var(--lower-border); }
+  .day-pill.rest  { background: var(--subtle); border-color: var(--border); }
+  .day-pill.selected { box-shadow: 0 0 0 2.5px var(--text); }
+  .day-pill.upper.selected { box-shadow: 0 0 0 2.5px var(--upper); }
+  .day-pill.lower.selected { box-shadow: 0 0 0 2.5px var(--lower); }
+
+  .dl {
+    font-size: 8.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .day-pill.upper .dl { color: var(--upper); }
+  .day-pill.lower .dl { color: var(--lower); }
+  .dt {
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .day-pill.upper .dt { color: var(--upper); }
+  .day-pill.lower .dt { color: var(--lower); }
+  .day-pill.rest  .dt { color: var(--muted); }
+
+  /* ── Tab bar ── */
+  .tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 1.5rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px 2px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: transparent;
+    color: var(--muted);
+    letter-spacing: -0.01em;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .tab.upper.active { background: var(--upper); }
+  .tab.lower.active { background: var(--lower); }
+  .tab.rest.active  { background: var(--text); }
+
+  /* ── Panel ── */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeUp 0.2s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Meta chips ── */
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .chip {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 99px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  /* ── Progress ── */
+  .progress-wrap { margin-bottom: 1.1rem; }
+  .progress-meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .progress-meta span { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .progress-meta strong { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); }
+  .progress-track {
+    height: 5px;
+    border-radius: 99px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  .upper-fill { background: var(--upper); }
+  .lower-fill { background: var(--lower); }
+
+  /* ── Section label ── */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.1rem 0 0.45rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Exercise card ── */
+  .ex-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 13px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .ex-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
+  .ex-card:active { transform: scale(0.98); }
+  .ex-card.done {
+    background: var(--subtle);
+    border-color: var(--border);
+  }
+
+  /* checkbox */
+  .cb {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s ease;
+    font-size: 11px;
+    color: #fff;
+  }
+  .upper-panel .ex-card.done .cb { background: var(--upper); border-color: var(--upper); }
+  .lower-panel .ex-card.done .cb { background: var(--lower); border-color: var(--lower); }
+
+  .ex-info { flex: 1; min-width: 0; }
+  .ex-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    transition: opacity 0.2s, color 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .ex-card.done .ex-name { opacity: 0.35; text-decoration: line-through; }
+  .ex-detail {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 1px;
+    font-weight: 400;
+  }
+  .ex-card.done .ex-detail { opacity: 0.4; }
+
+  .sets-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    padding: 4px 9px;
+    border-radius: 99px;
+    flex-shrink: 0;
+    font-weight: 500;
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    background: var(--bg);
+    transition: opacity 0.2s;
+  }
+  .ex-card.done .sets-badge { opacity: 0.3; }
+
+  /* ── Tip ── */
+  .tip {
+    margin-top: 1.1rem;
+    padding: 11px 14px;
+    background: var(--surface);
+    border-left: 3px solid var(--text);
+    border-radius: 0 12px 12px 0;
+    border: 1.5px solid var(--border);
+    border-left-width: 3px;
+    font-size: 12.5px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .upper-panel .tip { border-left-color: var(--upper); }
+  .lower-panel .tip { border-left-color: var(--lower); }
+
+  /* ── Reset ── */
+  .reset-btn {
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { background: var(--subtle); color: var(--text); }
+
+  /* ── Rest panel ── */
+  .rest-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 2.25rem 1.75rem;
+    text-align: center;
+  }
+  .rest-emoji { font-size: 2.75rem; margin-bottom: 1rem; }
+  .rest-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+  .rest-body { font-size: 13px; color: var(--muted); line-height: 1.8; }
+  .rest-body strong { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Upper / Lower Split</h1>
+    <p>4 days · dumbbells only · tap exercises to track</p>
+  </div>
+
+  <!-- Week strip -->
+  <div class="week-grid">
+    <div class="day-pill upper selected" onclick="show('ua',this)"><div class="dl">Mon</div><div class="dt">Upper A</div></div>
+    <div class="day-pill lower" onclick="show('la',this)"><div class="dl">Tue</div><div class="dt">Lower A</div></div>
+    <div class="day-pill rest"  onclick="show('rest',this)"><div class="dl">Wed</div><div class="dt">Rest</div></div>
+    <div class="day-pill upper" onclick="show('ub',this)"><div class="dl">Thu</div><div class="dt">Upper B</div></div>
+    <div class="day-pill lower" onclick="show('lb',this)"><div class="dl">Fri</div><div class="dt">Lower B</div></div>
+    <div class="day-pill rest"  onclick="show('rest',this)"><div class="dl">Sat</div><div class="dt">Rest</div></div>
+    <div class="day-pill rest"  onclick="show('rest',this)"><div class="dl">Sun</div><div class="dt">Rest</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab upper active" onclick="show('ua')">Upper A</button>
+    <button class="tab lower"        onclick="show('la')">Lower A</button>
+    <button class="tab upper"        onclick="show('ub')">Upper B</button>
+    <button class="tab lower"        onclick="show('lb')">Lower B</button>
+    <button class="tab rest"         onclick="show('rest')">Rest</button>
+  </div>
+
+  <!-- UPPER A -->
+  <div id="ua" class="panel active upper-panel">
+    <div class="chips">
+      <div class="chip">⏱ 45–55 min</div>
+      <div class="chip">Chest · Back · Shoulders · Arms</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>Completed</span><strong id="prog-ua">0 / 7</strong></div>
+      <div class="progress-track"><div class="progress-fill upper-fill" id="fill-ua"></div></div>
+    </div>
+    <div class="section-label">Chest</div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Flat Bench Press</div><div class="ex-detail">8–12 reps · main chest strength</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Incline Press</div><div class="ex-detail">8–12 reps · upper chest</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Back</div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Single-Arm DB Row</div><div class="ex-detail">8–12 reps each side · brace on bench</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Bent-Over DB Row</div><div class="ex-detail">10 reps · squeeze shoulder blades</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Shoulders</div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Overhead Press</div><div class="ex-detail">8–12 reps · seated or standing</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Arms</div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Alternating DB Curl</div><div class="ex-detail">10–12 reps · supinate at top</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ua')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Overhead Tricep Extension</div><div class="ex-detail">10–12 reps · single DB both hands</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="tip">Monday energy is high — push heavier on bench and rows, coast on arms at the end.</div>
+    <button class="reset-btn" onclick="resetPanel('ua')">↺ Reset workout</button>
+  </div>
+
+  <!-- LOWER A -->
+  <div id="la" class="panel lower-panel">
+    <div class="chips">
+      <div class="chip">⏱ 45–55 min</div>
+      <div class="chip">Quads · Hamstrings · Glutes · Calves</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>Completed</span><strong id="prog-la">0 / 5</strong></div>
+      <div class="progress-track"><div class="progress-fill lower-fill" id="fill-la"></div></div>
+    </div>
+    <div class="section-label">Quads / Glutes</div>
+    <div class="ex-card" onclick="toggle(this,'la')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Goblet Squat</div><div class="ex-detail">10–12 reps · hold 1 DB at chest</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'la')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Walking Lunges</div><div class="ex-detail">10 reps each leg · torso upright</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Hamstrings</div>
+    <div class="ex-card" onclick="toggle(this,'la')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Romanian Deadlift</div><div class="ex-detail">10–12 reps · 3 sec eccentric, feel the stretch</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Glutes</div>
+    <div class="ex-card" onclick="toggle(this,'la')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Hip Thrust</div><div class="ex-detail">12 reps · shoulders on bench, DB on hips</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Calves</div>
+    <div class="ex-card" onclick="toggle(this,'la')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Standing Calf Raises</div><div class="ex-detail">15–20 reps · full range of motion</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="tip">Slow the lowering phase on every exercise — that's where dumbbell leg training actually earns its keep.</div>
+    <button class="reset-btn" onclick="resetPanel('la')">↺ Reset workout</button>
+  </div>
+
+  <!-- UPPER B -->
+  <div id="ub" class="panel upper-panel">
+    <div class="chips">
+      <div class="chip">⏱ 45–55 min</div>
+      <div class="chip">Chest · Back · Shoulders · Arms</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>Completed</span><strong id="prog-ub">0 / 8</strong></div>
+      <div class="progress-track"><div class="progress-fill upper-fill" id="fill-ub"></div></div>
+    </div>
+    <div class="section-label">Chest</div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Flat Flyes</div><div class="ex-detail">10–12 reps · stretch at bottom, squeeze at top</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Decline Press</div><div class="ex-detail">8–12 reps · lower chest</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Back</div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Pullover</div><div class="ex-detail">10–12 reps · lats + serratus</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Rear Delt Flyes</div><div class="ex-detail">12–15 reps · light, fully controlled</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Shoulders</div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Lateral Raises</div><div class="ex-detail">12–15 reps · no swinging</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Front Raise</div><div class="ex-detail">10–12 reps · anterior delt</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Arms</div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Hammer Curl</div><div class="ex-detail">10–12 reps · brachialis + bicep</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'ub')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Tricep Kickbacks</div><div class="ex-detail">12 reps each arm · squeeze hard at top</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="tip">Upper B is isolation-heavy — go lighter, more mind-muscle. Don't ego lift here.</div>
+    <button class="reset-btn" onclick="resetPanel('ub')">↺ Reset workout</button>
+  </div>
+
+  <!-- LOWER B -->
+  <div id="lb" class="panel lower-panel">
+    <div class="chips">
+      <div class="chip">⏱ 45–55 min</div>
+      <div class="chip">Quads · Hamstrings · Glutes · Calves</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>Completed</span><strong id="prog-lb">0 / 5</strong></div>
+      <div class="progress-track"><div class="progress-fill lower-fill" id="fill-lb"></div></div>
+    </div>
+    <div class="section-label">Quads / Glutes</div>
+    <div class="ex-card" onclick="toggle(this,'lb')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Bulgarian Split Squat</div><div class="ex-detail">8–10 reps each leg · rear foot elevated</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="ex-card" onclick="toggle(this,'lb')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Step-Up</div><div class="ex-detail">10 reps each leg · controlled, no momentum</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Hamstrings</div>
+    <div class="ex-card" onclick="toggle(this,'lb')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Sumo Deadlift</div><div class="ex-detail">10–12 reps · wide stance, 1 DB between legs</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Glutes</div>
+    <div class="ex-card" onclick="toggle(this,'lb')"><div class="cb"></div><div class="ex-info"><div class="ex-name">DB Lateral Lunge</div><div class="ex-detail">10 reps each side · sit back into it</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="section-label">Calves</div>
+    <div class="ex-card" onclick="toggle(this,'lb')"><div class="cb"></div><div class="ex-info"><div class="ex-name">Single-Leg Calf Raise</div><div class="ex-detail">12–15 reps each leg · hold DB for load</div></div><div class="sets-badge">2 sets</div></div>
+    <div class="tip">Bulgarian split squats will humble you the first time. Start lighter than you think — seriously.</div>
+    <button class="reset-btn" onclick="resetPanel('lb')">↺ Reset workout</button>
+  </div>
+
+  <!-- REST -->
+  <div id="rest" class="panel">
+    <div class="rest-card">
+      <div class="rest-emoji">🌙</div>
+      <div class="rest-title">Rest Day</div>
+      <div class="rest-body">
+        <strong>Wednesday, Saturday, Sunday</strong> are full rest days.<br><br>
+        Muscles grow during recovery, not during the workout itself. Light walking, stretching or mobility is fine — just don't add another session thinking it'll speed things up.<br><br>
+        Sleep 7–9 hrs · eat ~0.7–1g protein per lb of bodyweight · show up fresh.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const totals = { ua: 7, la: 5, ub: 8, lb: 5 };
+
+  function toggle(card, panel) {
+    card.classList.toggle('done');
+    card.querySelector('.cb').textContent = card.classList.contains('done') ? '✓' : '';
+    updateProgress(panel);
+  }
+
+  function updateProgress(panel) {
+    if (!totals[panel]) return;
+    const el = document.getElementById(panel);
+    const done = el.querySelectorAll('.ex-card.done').length;
+    const total = totals[panel];
+    document.getElementById('prog-' + panel).textContent = done + ' / ' + total;
+    document.getElementById('fill-' + panel).style.width = (done / total * 100) + '%';
+  }
+
+  function resetPanel(panel) {
+    document.getElementById(panel).querySelectorAll('.ex-card.done').forEach(c => {
+      c.classList.remove('done');
+      c.querySelector('.cb').textContent = '';
+    });
+    updateProgress(panel);
+  }
+
+  // panel id → tab index
+  const panelOrder = ['ua','la','ub','lb','rest'];
+  const tabs = document.querySelectorAll('.tab');
+  const pills = document.querySelectorAll('.day-pill');
+
+  function show(id, clickedPill) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+
+    tabs.forEach((t, i) => {
+      t.classList.toggle('active', panelOrder[i] === id);
+    });
+
+    pills.forEach(p => p.classList.remove('selected'));
+    if (clickedPill) {
+      clickedPill.classList.add('selected');
+    } else {
+      // sync first matching pill
+      pills.forEach(p => {
+        const txt = p.querySelector('.dt').textContent;
+        const map = { ua:'Upper A', la:'Lower A', ub:'Upper B', lb:'Lower B', rest:'Rest' };
+        if (txt === map[id]) p.classList.add('selected');
+      });
+    }
+  }
+</script>
+</body>
+</html>
